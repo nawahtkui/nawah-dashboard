@@ -1,0 +1,202 @@
+import React, { useEffect, useState } from "react";
+import { ethers } from "ethers";
+import Web3Modal from "web3modal";
+import axios from "axios";
+
+export default function NawahDashboard() {
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [address, setAddress] = useState("");
+  const [nativeBalance, setNativeBalance] = useState(null);
+  const [tokens, setTokens] = useState([]);
+  const [newTokenAddr, setNewTokenAddr] = useState("");
+  const [nfts, setNFTs] = useState([]);
+  const [networkChainId, setNetworkChainId] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const ERC20_ABI = [
+    "function balanceOf(address) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function symbol() view returns (string)"
+  ];
+
+  const web3Modal = new Web3Modal({ cacheProvider: true, providerOptions: {} });
+
+  useEffect(() => {
+    if (window.ethereum) {
+      const p = new ethers.providers.Web3Provider(window.ethereum, "any");
+      setProvider(p);
+      window.ethereum.on && window.ethereum.on("accountsChanged", handleAccountsChanged);
+      window.ethereum.on && window.ethereum.on("chainChanged", handleChainChanged);
+    }
+    return () => {
+      try {
+        window.ethereum && window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        window.ethereum && window.ethereum.removeListener("chainChanged", handleChainChanged);
+      } catch (e) {}
+    };
+  }, []);
+
+  useEffect(() => {
+    if (provider && address) {
+      fetchNativeBalance();
+      tokens.forEach((t, idx) => updateTokenBalance(t.address, idx));
+      fetchNFTs();
+    }
+  }, [provider, address]);
+
+  function handleAccountsChanged(accounts) {
+    if (accounts.length === 0) {
+      setAddress("");
+      setSigner(null);
+    } else {
+      setAddress(accounts[0]);
+      setSigner(provider.getSigner());
+    }
+  }
+
+  function handleChainChanged(chainId) {
+    setNetworkChainId(chainId);
+    window.location.reload();
+  }
+
+  async function connectWallet() {
+    try {
+      const connection = await web3Modal.connect();
+      const p = new ethers.providers.Web3Provider(connection);
+      setProvider(p);
+      const s = p.getSigner();
+      setSigner(s);
+      const a = await s.getAddress();
+      setAddress(a);
+      const network = await p.getNetwork();
+      setNetworkChainId(network.chainId);
+      fetchNativeBalance();
+    } catch(e) {
+      console.error(e);
+      alert("Failed to connect wallet: " + (e.message || e));
+    }
+  }
+
+  async function fetchNativeBalance() {
+    if (!provider || !address) return;
+    try {
+      setLoading(true);
+      const bal = await provider.getBalance(address);
+      setNativeBalance(ethers.utils.formatEther(bal));
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
+      console.error(e);
+    }
+  }
+
+  async function fetchTokenPriceFromCoinGecko(contractAddress, platform = 'binance-smart-chain') {
+    try {
+      const url = `https://api.coingecko.com/api/v3/simple/token_price/${platform}?contract_addresses=${contractAddress}&vs_currencies=usd`;
+      const response = await axios.get(url);
+      const price = response.data[contractAddress.toLowerCase()]?.usd || 0;
+      return price;
+    } catch (e) {
+      console.error("Failed to fetch price", e);
+      return 0;
+    }
+  }
+
+  async function addToken() {
+    const addr = newTokenAddr.trim();
+    if (!ethers.utils.isAddress(addr)) return alert("Invalid token contract address.");
+    if (tokens.find(t => t.address.toLowerCase() === addr.toLowerCase())) {
+      setNewTokenAddr("");
+      return;
+    }
+    try {
+      setLoading(true);
+      const tokenContract = new ethers.Contract(addr, ERC20_ABI, provider);
+      const [sym, dec, bal] = await Promise.all([
+        tokenContract.symbol(),
+        tokenContract.decimals(),
+        tokenContract.balanceOf(address)
+      ]);
+      const usdPrice = await fetchTokenPriceFromCoinGecko(addr);
+      const token = { address: addr, symbol: sym, decimals: dec, balance: bal.toString(), usdPrice };
+      setTokens(prev => [...prev, token]);
+      setNewTokenAddr("");
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
+      console.error(e);
+      alert("Failed to add token: " + (e.message || e));
+    }
+  }
+
+  async function updateTokenBalance(tokenAddr, idx) {
+    try {
+      const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
+      const balance = await tokenContract.balanceOf(address);
+      const usdPrice = await fetchTokenPriceFromCoinGecko(tokenAddr);
+      setTokens(prev => {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], balance: balance.toString(), usdPrice };
+        return copy;
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function fetchNFTs() {
+    const exampleNFTs = [
+      { tokenId: 469, name: "PancakeSwap V4", contract: "0xd4b...c4d4", image: "https://via.placeholder.com/150" },
+      { tokenId: 1, name: "CertificateNFT #1", contract: "0xabc...123", image: "https://via.placeholder.com/150" }
+    ];
+    setNFTs(exampleNFTs);
+  }
+
+  function downloadImage(url, name) {
+    fetch(url)
+      .then(res => res.blob())
+      .then(blob => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+      });
+  }
+
+  const totalPortfolio = tokens.reduce((acc, t) => acc + (parseFloat(ethers.utils.formatUnits(t.balance, t.decimals)) * t.usdPrice), 0);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white p-6">
+      <div className="max-w-6xl mx-auto">
+        <header className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Nawah Dashboard</h1>
+          <button onClick={connectWallet} className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow">Connect Wallet</button>
+        </header>
+
+        <section className="bg-white p-4 rounded-2xl shadow mb-6">
+          <h2 className="text-lg font-semibold mb-2">Portfolio value</h2>
+          <div className="flex justify-between">
+            <div>Address: {address || 'Not connected'}</div>
+            <div>Native Balance: {nativeBalance || '—'}</div>
+            <div>Total USD: ${totalPortfolio.toFixed(2)}</div>
+          </div>
+        </section>
+
+        <section className="bg-white p-4 rounded-2xl shadow mb-6">
+          <h2 className="text-lg font-semibold mb-2">NFTs</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {nfts.map(nft => (
+              <div key={nft.tokenId} className="border rounded p-2">
+                <img src={nft.image} alt={nft.name} className="w-full h-40 object-cover rounded" />
+                <div className="mt-2 font-medium text-sm">{nft.name}</div>
+                <div className="text-xs text-slate-500">{nft.contract}</div>
+                <button onClick={() => downloadImage(nft.image, `${nft.name}.png`)} className="mt-1 px-2 py-1 bg-emerald-100 rounded text-xs">Download</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
