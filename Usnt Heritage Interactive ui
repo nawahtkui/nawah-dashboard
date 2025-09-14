@@ -1,0 +1,110 @@
+import React, { useState } from 'react';
+import { Canvas, useLoader } from '@react-three/fiber';
+import { OrbitControls, Sphere } from '@react-three/drei';
+import * as THREE from 'three';
+import { motion } from 'framer-motion';
+
+const nftData = [
+  {
+    id: 1,
+    name: 'Penny Black (1840)',
+    type: 'Stamp',
+    message: 'Beginning and Communication',
+    description: 'The world’s first postage stamp.',
+    image: '/assets/penny_black.png',
+    priceUSNT: 0.99,
+    modelTexture: '/assets/penny_black_texture.jpg'
+  },
+  {
+    id: 2,
+    name: 'Inverted Jenny (1918)',
+    type: 'Stamp',
+    message: 'Creativity from Mistakes',
+    description: 'The famous printing error stamp.',
+    image: '/assets/inverted_jenny.png',
+    priceUSNT: 1.0,
+    modelTexture: '/assets/inverted_jenny_texture.jpg'
+  },
+  {
+    id: 3,
+    name: 'Umayyad Gold Dinar',
+    type: 'Coin',
+    message: 'Cultural Identity',
+    description: 'First Arab gold dinar.',
+    image: '/assets/umayyad_dinar.png',
+    priceUSNT: 1.5,
+    modelTexture: '/assets/umayyad_dinar_texture.jpg'
+  }
+];
+
+function NFTModel({ textureUrl }) {
+  const texture = useLoader(THREE.TextureLoader, textureUrl);
+  return (
+    <Sphere args={[1, 64, 64]}>
+      <meshStandardMaterial map={texture} metalness={0.8} roughness={0.4} />
+    </Sphere>
+  );
+}
+
+export default function NFTPreviewDashboard() {
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [selectedNFT, setSelectedNFT] = useState(null);
+
+  const connectWallet = () => {
+    setWalletConnected(true);
+    alert('Wallet connected!');
+  };
+
+  const buyNFT = (nft) => {
+    if (!walletConnected) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+    alert(`Purchasing ${nft.name} for ${nft.priceUSNT} USNT`);
+  };
+
+  return (
+    <div className="p-4">
+      <div className="flex gap-4 mb-4 flex-wrap">
+        <button onClick={connectWallet} className="bg-green-500 text-white p-2 rounded">
+          {walletConnected ? 'Wallet Connected' : 'Connect Wallet'}
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {nftData.map((nft) => (
+          <motion.div key={nft.id} whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }} className="cursor-pointer">
+            <div className="shadow-lg hover:shadow-2xl transition-all duration-300 border rounded-lg overflow-hidden p-2">
+              <h3 className="bg-gradient-to-r from-yellow-200 to-yellow-400 text-center font-bold text-lg p-2">{nft.name}</h3>
+              <img src={nft.image} alt={nft.name} className="w-full h-40 object-contain mb-2" />
+              <p><b>Type:</b> {nft.type}</p>
+              <p><b>Message:</b> {nft.message}</p>
+              <p className="text-sm text-gray-700 mb-2">{nft.description}</p>
+              <p className="font-semibold mb-2"><b>Price:</b> {nft.priceUSNT} USNT</p>
+              <div className="flex gap-2">
+                <button onClick={() => setSelectedNFT(nft)} className="flex-1 bg-blue-400 hover:bg-blue-500 p-2 rounded text-white">Preview 3D</button>
+                <button onClick={() => buyNFT(nft)} className="flex-1 bg-yellow-400 hover:bg-yellow-500 p-2 rounded text-white">Buy NFT</button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {selectedNFT && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg p-4 w-11/12 md:w-3/4 lg:w-1/2">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{selectedNFT.name} - 3D Preview</h2>
+              <button onClick={() => setSelectedNFT(null)} className="bg-red-400 hover:bg-red-500 p-2 rounded text-white">Close</button>
+            </div>
+            <Canvas className="w-full h-96">
+              <ambientLight intensity={0.5} />
+              <directionalLight position={[0, 0, 5]} intensity={1} />
+              <OrbitControls enableZoom={true} />
+              <NFTModel textureUrl={selectedNFT.modelTexture} />
+            </Canvas>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
