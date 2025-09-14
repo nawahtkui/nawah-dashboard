@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/nawah-dashboard/static/css/main.1aa64033.css",
-    "main.js": "/nawah-dashboard/static/js/main.da15361f.js",
+    "main.css": "/nawah-dashboard/static/css/main.a7254d9f.css",
+    "main.js": "/nawah-dashboard/static/js/main.8fab5b39.js",
     "index.html": "/nawah-dashboard/index.html",
-    "main.1aa64033.css.map": "/nawah-dashboard/static/css/main.1aa64033.css.map",
-    "main.da15361f.js.map": "/nawah-dashboard/static/js/main.da15361f.js.map"
+    "main.a7254d9f.css.map": "/nawah-dashboard/static/css/main.a7254d9f.css.map",
+    "main.8fab5b39.js.map": "/nawah-dashboard/static/js/main.8fab5b39.js.map"
   },
   "entrypoints": [
-    "static/css/main.1aa64033.css",
-    "static/js/main.da15361f.js"
+    "static/css/main.a7254d9f.css",
+    "static/js/main.8fab5b39.js"
   ]
 }
