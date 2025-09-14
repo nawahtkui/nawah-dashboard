@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/nawah-dashboard/static/css/main.1aa64033.css",
+    "main.js": "/nawah-dashboard/static/js/main.da15361f.js",
+    "index.html": "/nawah-dashboard/index.html",
+    "main.1aa64033.css.map": "/nawah-dashboard/static/css/main.1aa64033.css.map",
+    "main.da15361f.js.map": "/nawah-dashboard/static/js/main.da15361f.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.1aa64033.css",
+    "static/js/main.da15361f.js"
+  ]
+}
